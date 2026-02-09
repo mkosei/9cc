@@ -6,6 +6,26 @@
 #include <string.h>
 
 typedef enum {
+  ND_ADD, // +
+  ND_SUB, // -
+  ND_MUL, // *
+  ND_DIV, // /
+  ND_NUM,
+} Nodekind;
+
+typedef struct  Node Node;
+
+struct Node
+{
+  Nodekind kind;
+  Node *lhs;
+  Node *rhs;
+  int val;
+};
+
+
+
+typedef enum {
   TK_RESERVED, // 記号
   TK_NUM,      // 整数トークン
   TK_EOF,      // 入力の終わりを表すトークン
@@ -101,6 +121,21 @@ Token *tokenize(char *p) {
   }
   new_token(TK_EOF, cur, p);
   return head.next;
+}
+
+Node *new_node(Nodekind kind, Node *lhs, Node *rhs) {
+  Node *node = calloc(1, sizeof(node));
+  node->kind = kind;
+  node->lhs = lhs;
+  node->rhs = rhs;
+  return node;
+}
+
+Node *new_node_num(int val) {
+  Node *node = calloc(1, sizeof(node)); 
+  node->kind = ND_NUM;
+  node->val = val;
+  return node;
 }
 
 
