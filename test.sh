@@ -30,4 +30,6 @@ assert 0 "int main(){ if (0) return 1; else return 0; }"
 assert 3 "int main(){ i=0; while(i<3) i=i+1; return i; }"
 assert 3 "int main(){ for(i=0;i<3;i=i+1); return i; }"
 
+assert 3 "int main(){ int x; int *y; y=&x; *y=3; return x; }"
+
 echo OK

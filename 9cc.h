@@ -3,11 +3,22 @@
 
 #include <stdbool.h>
 
-#define MAX_CODE 1000
-#define MAX_INDEX 100
-
 typedef struct Node Node;
 typedef struct LVar LVar;
+
+typedef struct Type Type;
+typedef enum {
+  TY_INT,
+  TY_PTR,
+} TypeKind;
+
+struct Type {
+  TypeKind ty_kind;
+  struct Type *base;
+  // まだ使わん
+  //  int size;
+  //  int align;
+};
 
 typedef enum {
   TK_RESERVED,
@@ -32,6 +43,12 @@ struct Obj {
   char *name;
 
   Node *body;
+  Type *ty;
+
+  // LVarをこっちに移せる説
+  int len;
+  int offset;
+  //
 
   LVar *locals;
   int stack_size;
@@ -90,13 +107,13 @@ struct LVar {
   char *name;
   int len;
   int offset;
+  Type *ty;
 };
 
 LVar *locals;
 
 extern Token *token;
 extern char *user_input;
-extern Token tokens[MAX_INDEX];
 
 Node *stmt(void);
 Node *expr(void);
@@ -109,6 +126,7 @@ Node *primary(void);
 Node *unary(void);
 
 Token *tokenize(char *p);
+
 void gen_func(Obj *fn);
 void gen_expr(Node *node);
 void gen_stmt(Node *node);
@@ -120,5 +138,8 @@ void expect(const char op);
 int expect_number();
 bool at_eof();
 Token *consume_ident();
+
+Type *new_type(TypeKind kind);
+Type *pointer_to(Type *base);
 
 #endif

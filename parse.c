@@ -76,14 +76,20 @@ Node *new_node_num(int val) {
   node->val = val;
   return node;
 }
+
 Node *new_unary(Nodekind kind, Node *expr) {
-  Node *node = calloc(1, sizeof(Node));
+  Node *node = new_node(kind, NULL, NULL);
   node->kind = kind;
   node->lhs = expr;
+  return node;
 }
 
 Node *declaration() {
   expect_keyword("int");
+
+  Type *ty = new_type(TY_INT);
+  while (consume("*"))
+    ty = pointer_to(ty);
 
   Token *tok = consume_ident();
   if (!tok)
@@ -253,6 +259,13 @@ Obj *function() {
   locals = NULL;
   expect_keyword("int");
 
+  // 仮実装
+  Type *ty_int = &(Type){TY_INT};
+  Type *type = ty_int;
+  while (consume("*")) {
+    type = pointer_to(type);
+  }
+
   char *name = expect_ident();
 
   expect('(');
@@ -275,6 +288,7 @@ Obj *function() {
   Obj *fn = calloc(1, sizeof(Obj));
   fn->name = name;
   fn->body = body;
+  fn->ty = type;
   fn->locals = locals;
   int max = 0;
 

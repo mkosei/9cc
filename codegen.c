@@ -21,14 +21,21 @@ void gen_func(Obj *fn) {
 }
 
 void gen_lval(Node *node) {
-  if (node->kind != ND_LVAR) {
+  switch (node->kind) {
+  case ND_LVAR:
+    printf("  mov x0, x29\n");
+    printf("  sub x0, x0, #%d\n", node->offset);
+    printf("  str x0, [sp, #-16]!\n");
+    return;
+
+  case ND_DEREF:
+    gen_expr(node->lhs);
+    return;
+
+  default:
     fprintf(stderr, "代入の左辺値が変数ではありません\n");
     exit(1);
   }
-
-  printf("  mov x0, x29\n");
-  printf("  sub x0, x0, #%d\n", node->offset);
-  printf("  str x0, [sp, #-16]!\n");
 }
 
 void gen_stmt(Node *node) {
@@ -89,7 +96,8 @@ void gen_stmt(Node *node) {
 
   default:
     gen_expr(node);
-    printf("  add sp, sp, #16\n");
+    // printf("  add sp, sp, #16\n");
+    printf("  ldr x0, [sp], #16\n");
     return;
   }
 }
@@ -111,7 +119,6 @@ void gen_expr(Node *node) {
 
     printf("  bl %s\n", node->funcname);
 
-    // 戻り値 push
     printf("  str x0, [sp, #-16]!\n");
     return;
 
@@ -134,11 +141,10 @@ void gen_expr(Node *node) {
     return;
 
   case ND_ASSIGN:
-    gen_expr(node->rhs);
     gen_lval(node->lhs);
-
-    printf("  ldr x0, [sp], #16\n");
+    gen_expr(node->rhs);
     printf("  ldr x1, [sp], #16\n");
+    printf("  ldr x0, [sp], #16\n");
     printf("  str x1, [x0]\n");
     printf("  str x1, [sp, #-16]!\n");
     return;
