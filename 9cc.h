@@ -96,6 +96,8 @@ struct Node {
   int val;
   int offset;
 
+  Type *ty;
+
   // function
   char *funcname;
   Node **args;
