@@ -24,3 +24,43 @@ Type *pointer_to(Type *base) {
   ty->base = base;
   return ty;
 }
+
+// void add_type(Node *node) {
+//   if (!node || node->ty)
+//     return;
+//
+//   add_type(node->lhs);
+//   add_type(node->rhs);
+//
+//   switch (node->kind) {
+//   case ND_NUM:
+//     node->ty = ty_int;
+//     return;
+//
+//     // case ND_VAR:
+//     //     node->ty = node->var_ty;
+//     //     return;
+//
+//   case ND_ADD:
+//   case ND_SUB:
+//   case ND_MUL:
+//   case ND_DIV:
+//     node->ty = node->lhs->ty;
+//     return;
+//
+//   case ND_ASSIGN:
+//     node->ty = node->lhs->ty;
+//     return;
+//
+//   case ND_ADDR:
+//     node->ty = pointer_to(node->lhs->ty);
+//     return;
+//
+//   case ND_DEREF:
+//     node->ty = node->lhs->ty->base;
+//     return;
+//
+//   default:
+//     return;
+//   }
+// }

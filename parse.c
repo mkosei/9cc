@@ -11,7 +11,7 @@
 
 extern Token *token;
 extern char *user_input;
-LVar *locals = NULL;
+Obj *locals = NULL;
 static char *brk_label;
 static char *cont_label;
 
@@ -54,8 +54,8 @@ static char *new_unique_name(void) {
   return buf;
 }
 
-LVar *find_lvar(Token *tok) {
-  for (LVar *var = locals; var; var = var->next) {
+Obj *find_var(Token *tok) {
+  for (Obj *var = locals; var; var = var->next) {
     if (var->len == tok->len && !memcmp(tok->str, var->name, var->len))
       return var;
   }
@@ -96,6 +96,12 @@ Node *new_unary(Nodekind kind, Node *expr) {
   return node;
 }
 
+static Node *new_num(int val) {
+  Node *node = new_node(ND_NUM);
+  node->val = val;
+  return node;
+}
+
 Node *declaration() {
   expect_keyword("int");
 
@@ -107,13 +113,13 @@ Node *declaration() {
   if (!tok)
     error(token->str, "変数名が必要");
 
-  LVar *lvar = calloc(1, sizeof(LVar));
-  lvar->name = tok->str;
-  lvar->len = tok->len;
-  lvar->next = locals;
+  Obj *var = calloc(1, sizeof(Obj));
+  var->name = tok->str;
+  var->len = tok->len;
+  var->next = locals;
 
-  lvar->offset = locals ? locals->offset + 8 : 8;
-  locals = lvar;
+  var->offset = locals ? locals->offset + 8 : 8;
+  locals = var;
 
   Node *node = new_binary(ND_BLOCK, NULL, NULL);
   node->body = NULL;
@@ -122,7 +128,7 @@ Node *declaration() {
   if (consume("=")) {
     Node *lhs = calloc(1, sizeof(Node));
     lhs->kind = ND_LVAR;
-    lhs->offset = lvar->offset;
+    lhs->offset = var->offset;
 
     node = new_binary(ND_ASSIGN, lhs, expr());
   }
@@ -177,7 +183,7 @@ Node *stmt() {
     // char *brk = brk_label;
     // char *cont = cont_label;
 
-    LVar *locals_backup = locals;
+    Obj *locals_backup = locals;
     Node *then = stmt();
     locals = locals_backup;
 
@@ -218,7 +224,7 @@ Node *stmt() {
       inc = expr();
     expect(')');
 
-    LVar *locals_backup = locals;
+    Obj *locals_backup = locals;
     Node *then = stmt();
     // node = new_node(ND_FOR, cond, then);
     locals = locals_backup;
@@ -304,7 +310,7 @@ Obj *function() {
   fn->locals = locals;
   int max = 0;
 
-  for (LVar *var = locals; var; var = var->next)
+  for (Obj *var = locals; var; var = var->next)
     if (max < var->offset)
       max = var->offset;
 
@@ -350,23 +356,62 @@ Node *relational() {
   }
 }
 
+int size_of(Type *ty) {
+  switch (ty->ty_kind) {
+  case TY_INT:
+    return 4;
+  case TY_PTR:
+    return 8;
+  }
+}
+//
 // Node *new_add(Node *lhs, Node *rhs) {
+//   add_type(lhs);
+//   add_type(rhs);
+//   // int+int
 //   if (lhs->ty->ty_kind == TY_INT && rhs->ty->ty_kind == TY_INT) {
-//     Node *node = new_binary(ND_ADD, lhs, rhs);
-//     node->ty = rhs->ty;
-//     return node;
+//     return new_binary(ND_ADD, lhs, rhs);
 //   }
+//   // ptr+int
 //   if (lhs->ty->ty_kind == TY_PTR && rhs->ty->ty_kind == TY_INT) {
-//     rhs = new_binary(ND_ADD, rhs, new_node_num(sizeof(lhs->ty->base)));
+//     rhs = new_binary(ND_MUL, rhs, new_num(size_of(lhs->ty->base)));
+//     return new_binary(ND_ADD, lhs, rhs);
 //   }
+//   // int+ptr
+//   if (lhs->ty->ty_kind == TY_INT && rhs->ty->ty_kind == TY_PTR) {
+//     return new_add(rhs, lhs);
+//   }
+//   error(NULL, "nvalid operands for +");
+// }
+//
+// Node *new_sub(Node *lhs, Node *rhs) {
+//   add_type(lhs);
+//   add_type(rhs);
+//   // int-int
+//   if (lhs->ty->ty_kind == TY_INT && rhs->ty->ty_kind == TY_INT) {
+//     return new_binary(ND_SUB, lhs, rhs);
+//   }
+//   // ptr-int
+//   if (lhs->ty->ty_kind == TY_PTR && rhs->ty->ty_kind == TY_INT) {
+//     rhs = new_binary(ND_MUL, rhs, new_num(size_of(lhs->ty->base)));
+//     return new_binary(ND_SUB, lhs, rhs);
+//   }
+//   // ptr - ptr
+//   if (lhs->ty->ty_kind == TY_PTR && rhs->ty->ty_kind == TY_PTR) {
+//     Node *node = new_binary(ND_SUB, lhs, rhs);
+//     return new_binary(ND_DIV, node, new_num(size_of(lhs->ty->base)));
+//   }
+//   error(NULL, "nvalid operands for -");
 // }
 
 Node *add() {
   Node *node = mul();
   for (;;) {
     if (consume("+"))
+      // node = new_add(node, mul());
       node = new_binary(ND_ADD, node, mul());
     else if (consume("-"))
+      // node = new_sub(node, mul());
       node = new_binary(ND_SUB, node, mul());
     else
       return node;
@@ -417,22 +462,22 @@ Node *primary() {
     Node *node = calloc(1, sizeof(Node));
     node->kind = ND_LVAR;
 
-    LVar *lvar = find_lvar(tok);
-    if (lvar) {
-      node->offset = lvar->offset;
+    Obj *var = find_var(tok);
+    if (var) {
+      node->offset = var->offset;
     } else {
-      lvar = calloc(1, sizeof(LVar));
-      lvar->next = locals;
-      lvar->name = tok->str;
-      lvar->len = tok->len;
+      var = calloc(1, sizeof(Obj));
+      var->next = locals;
+      var->name = tok->str;
+      var->len = tok->len;
 
       if (locals)
-        lvar->offset = locals->offset + 8;
+        var->offset = locals->offset + 8;
       else
-        lvar->offset = 8;
+        var->offset = 8;
 
-      node->offset = lvar->offset;
-      locals = lvar;
+      node->offset = var->offset;
+      locals = var;
     }
 
     return node;

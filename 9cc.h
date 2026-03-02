@@ -45,12 +45,12 @@ struct Obj {
   Node *body;
   Type *ty;
 
-  // LVarをこっちに移せる説
   int len;
   int offset;
-  //
+  bool is_local;
+  bool is_function;
 
-  LVar *locals;
+  Obj *locals;
   int stack_size;
 };
 
@@ -97,6 +97,7 @@ struct Node {
   int offset;
 
   Type *ty;
+  Obj *var;
 
   // function
   char *funcname;
@@ -104,15 +105,7 @@ struct Node {
   int argc;
 };
 
-struct LVar {
-  LVar *next;
-  char *name;
-  int len;
-  int offset;
-  Type *ty;
-};
-
-LVar *locals;
+Obj *locals;
 
 extern Token *token;
 extern char *user_input;
@@ -143,5 +136,6 @@ Token *consume_ident();
 
 Type *new_type(TypeKind kind);
 Type *pointer_to(Type *base);
+void add_type(Node *node);
 
 #endif
